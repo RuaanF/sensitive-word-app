@@ -42,3 +42,22 @@ All endpoints are documented in Swagger.
    ```bash
    git clone https://github.com/yourusername/sensitive-words-app.git
    cd sensitive-words-app
+
+🧠 Performance Considerations
+If this system were to scale or be used in production, I’d explore:
+In-memory caching of the sensitive word list to avoid DB reads on every /sanitize request.
+Using compiled Regex or Trie-based matching for faster word detection.
+Batch API endpoints for bulk operations.
+Database indexing or partitioning for large datasets.
+Async queuing or rate-limiting for high-load scenarios.
+
+✨ Project Enhancement Ideas
+Given more time or in a real-world scenario, I’d consider:
+Authentication/authorization for managing words
+Categorization (e.g., SQL keywords, profanity, etc.)
+Analytics on word usage (e.g., most flagged words)
+Real-time sanitization via SignalR
+Export/import for word lists
+Toggle for strict vs lenient matching
+
+
