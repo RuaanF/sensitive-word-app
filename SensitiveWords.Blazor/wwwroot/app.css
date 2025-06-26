@@ -1,0 +1,53 @@
+body {
+    font-family: 'Press Start 2P', cursive;
+    background-color: #1e1e1e;
+    color: #00ff00;
+    padding: 20px;
+}
+
+input, textarea, button, select {
+    font-family: inherit;
+    border: 2px solid #00ff00;
+    background-color: black;
+    color: #00ff00;
+    padding: 8px;
+    margin: 5px;
+    width: 100%;
+    max-width: 500px;
+}
+
+button:hover {
+    background-color: #00ff00;
+    color: black;
+    cursor: pointer;
+}
+
+.chat {
+    background-color: #111;
+    border: 2px solid #00ff00;
+    padding: 20px;
+    margin-top: 20px;
+    max-width: 600px;
+}
+
+.chat-box {
+    border: 1px dashed #00ff00;
+    padding: 10px;
+    margin-bottom: 10px;
+    background-color: #000;
+    min-height: 100px;
+}
+
+.message {
+    padding: 6px;
+    margin-bottom: 4px;
+    border-left: 4px solid #00ff00;
+}
+
+.message.user {
+    color: #00ddff;
+}
+
+.message.bot {
+    color: #ff00aa;
+}

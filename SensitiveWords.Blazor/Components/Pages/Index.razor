@@ -1,0 +1,166 @@
+﻿@page "/"
+@rendermode InteractiveServer
+@using System.Net.Http.Json
+@inject HttpClient Http
+
+<HeadContent>
+    <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
+</HeadContent>
+
+<h1>🕹️ Sensitive Word Manager</h1>
+
+<div class="section">
+    <h3>🎯 Current Words</h3>
+    <select @onchange="OnSelectWord">
+        <option value="">-- Select Word --</option>
+        @foreach (var word in words)
+        {
+            <option value="@word.Id">@word.Word</option>
+        }
+    </select>
+    <button @onclick="DeleteSelected" disabled="@(!CanDelete)">Delete Selected</button>
+</div>
+
+<div class="section">
+    <input @bind="newWord" placeholder="Type new word..." />
+    <button @onclick="AddOrUpdateWord">@((isEditing ? "Update" : "Add") + " Word")</button>
+    @if (wordExists)
+    {
+        <p style="color: red">Word already exists or is empty!</p>
+    }
+</div>
+
+
+<div class="chat">
+    <h3>💬 Mock Chat</h3>
+    
+    <div class="chat-box">
+        @if (!string.IsNullOrWhiteSpace(messageToSanitize))
+        {
+            <div class="message user"><b>You:</b> @messageToSanitize</div>
+        }
+        @if (!string.IsNullOrWhiteSpace(sanitizedMessage))
+        {
+            <div class="message bot"><b>Bot:</b> @sanitizedMessage</div>
+        }
+    </div>
+
+    <textarea @bind="messageToSanitize" rows="3" placeholder="Type your message here..." />
+    <button @onclick="Sanitize">Send</button>
+</div>
+
+
+@code {
+    private List<SensitiveWordDto> words = new();
+    private string newWord = string.Empty;
+    private int? selectedWordId;
+    private string messageToSanitize = string.Empty;
+    private string sanitizedMessage = string.Empty;
+    private bool wordExists = false;
+    private bool isEditing = false;
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            words = await Http.GetFromJsonAsync<List<SensitiveWordDto>>("http://localhost:5115/sensitivewords");
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine("Error loading words: " + ex.Message);
+        }
+    }
+
+    private async Task AddOrUpdateWord()
+    {
+        wordExists = false;
+        if (string.IsNullOrWhiteSpace(newWord)) return;
+
+        if (isEditing && selectedWordId.HasValue)
+        {
+            var existing = words.FirstOrDefault(w => w.Id == selectedWordId);
+            if (existing != null)
+            {
+                existing.Word = newWord;
+                var response = await Http.PutAsJsonAsync($"http://localhost:5115/sensitivewords/{selectedWordId}", existing);
+                if (response.IsSuccessStatusCode)
+                {
+                    newWord = string.Empty;
+                    isEditing = false;
+                    selectedWordId = null;
+                }
+            }
+        }
+        else
+        {
+            if (words.Any(w => w.Word.Equals(newWord, StringComparison.OrdinalIgnoreCase)))
+            {
+                wordExists = true;
+                return;
+            }
+
+            var response = await Http.PostAsJsonAsync("http://localhost:5115/sensitivewords", new SensitiveWordDto { Word = newWord });
+            if (response.IsSuccessStatusCode)
+            {
+                var created = await response.Content.ReadFromJsonAsync<SensitiveWordDto>();
+                words.Add(created!);
+                newWord = string.Empty;
+            }
+        }
+    }
+
+    private async Task DeleteSelected()
+    {
+        if (selectedWordId is null) return;
+
+        var response = await Http.DeleteAsync($"http://localhost:5115/sensitivewords/{selectedWordId}");
+        if (response.IsSuccessStatusCode)
+        {
+            var item = words.FirstOrDefault(w => w.Id == selectedWordId);
+            if (item is not null) words.Remove(item);
+            newWord = string.Empty;
+            isEditing = false;
+            selectedWordId = null;
+        }
+    }
+
+    private async Task Sanitize()
+    {
+        var result = await Http.PostAsJsonAsync("http://localhost:5115/sanitize", new { message = messageToSanitize });
+        var response = await result.Content.ReadFromJsonAsync<SanitizedResponse>();
+        sanitizedMessage = response?.Sanitized ?? "";
+    }
+
+    private void OnSelectWord(ChangeEventArgs e)
+    {
+        if (int.TryParse(e.Value?.ToString(), out int id))
+        {
+            selectedWordId = id;
+            var selected = words.FirstOrDefault(w => w.Id == id);
+            if (selected != null)
+            {
+                newWord = selected.Word;
+                isEditing = true;
+            }
+        }
+        else
+        {
+            selectedWordId = null;
+            newWord = string.Empty;
+            isEditing = false;
+        }
+    }
+
+    private bool CanDelete => selectedWordId.HasValue;
+
+    public class SensitiveWordDto
+    {
+        public int Id { get; set; }
+        public string Word { get; set; } = string.Empty;
+    }
+
+    public class SanitizedResponse
+    {
+        public string Sanitized { get; set; } = string.Empty;
+    }
+}
